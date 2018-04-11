@@ -314,7 +314,7 @@ namespace NUnit.ConsoleRunner
                 foreach (var node in ep.Extensions)
                 {
                     _outWriter.Write("    Extension: ");
-                    _outWriter.Write(ColorStyle.Value, node.TypeName);
+                    _outWriter.Write(ColorStyle.Value, $"{node.TypeName} ({node.TargetFramework.DisplayName})");
                     _outWriter.WriteLine(node.Enabled ? "" : " (Disabled)");
                     foreach (var prop in node.PropertyNames)
                     {

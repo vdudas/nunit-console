@@ -21,38 +21,36 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 // ***********************************************************************
 
+using System;
 using Mono.Cecil;
+using NUnit.Common;
+using NUnit.Engine.Internal;
 
 namespace NUnit.Engine.Services
 {
-    public class ExtensionAssembly
+    internal class ExtensionAssembly
     {
         public ExtensionAssembly(string filePath, bool fromWildCard)
         {
             FilePath = filePath;
             FromWildCard = fromWildCard;
+            Assembly = GetAssemblyDefinition();
+            TargetFrameworkHelper = new TargetFrameworkHelper(Assembly);
         }
 
-        public string FilePath { get; private set; }
-        public bool FromWildCard { get; private set; }
+        public string FilePath { get; }
+        public bool FromWildCard { get; }
+        public AssemblyDefinition Assembly { get; }
+        internal TargetFrameworkHelper TargetFrameworkHelper { get; }
 
-        private AssemblyDefinition _assemblyDefinition;
-        public AssemblyDefinition Assembly
+        public string AssemblyName
         {
-            get
-            {
-                if (_assemblyDefinition == null)
-                {
-                    var resolver = new DefaultAssemblyResolver();
-                    resolver.AddSearchDirectory(System.IO.Path.GetDirectoryName(FilePath));
-                    resolver.AddSearchDirectory(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location));
-                    var parameters = new ReaderParameters() { AssemblyResolver = resolver };
+            get { return Assembly.Name.Name; }
+        }
 
-                    _assemblyDefinition = AssemblyDefinition.ReadAssembly(FilePath, parameters);
-                }
-
-                return _assemblyDefinition;
-            }
+        public Version AssemblyVersion
+        {
+            get { return Assembly.Name.Version; }
         }
 
         public ModuleDefinition MainModule
@@ -60,45 +58,59 @@ namespace NUnit.Engine.Services
             get { return Assembly.MainModule; }
         }
 
-        public AssemblyNameDefinition AssemblyName
-        {
-            get { return Assembly.Name; }
-        }
-
         /// <summary>
         /// IsDuplicateOf returns true if two assemblies have the same name.
         /// </summary>
         public bool IsDuplicateOf(ExtensionAssembly other)
         {
-            return AssemblyName.Name == other.AssemblyName.Name;
+            return AssemblyName == other.AssemblyName;
         }
         
         /// <summary>
         /// IsBetterVersion determines whether another assembly is
-        /// a better (higher) version than the current assembly.
+        /// a better than the current assembly. It first looks at 
+        /// for the highest assembly version, and then the highest target
+        /// framework. With a tie situation, assemblies specified directly
+        /// are prefered to those located via wildcards.
+        /// 
         /// It is only intended to be called if IsDuplicateOf
-        /// has already returned true.
+        /// has already returned true. This method does no work to check if
+        /// the target framework found is available under the current engine.
         /// </summary>
-        /// <param name="other"></param>
-        /// <returns></returns>
         public bool IsBetterVersionOf(ExtensionAssembly other)
         {
-#if DEBUG
-            if (!IsDuplicateOf(other))
-                throw new NUnitEngineException("IsBetterVersionOf should only be called on duplicate assemblies");
-#endif
+            Guard.OperationValid(IsDuplicateOf(other), "IsBetterVersionOf should only be called on duplicate assemblies");
 
-            var version = AssemblyName.Version;
-            var otherVersion = other.AssemblyName.Version;
-
+            //Look at assembly version
+            var version = AssemblyVersion;
+            var otherVersion = other.AssemblyVersion;
             if (version > otherVersion)
                 return true;
 
             if (version < otherVersion)
                 return false;
 
-            // Versions are equal, override only if this one was specified exactly while the other wasn't
+            //Look at target runtime
+            var targetRuntime = TargetFrameworkHelper.TargetRuntimeVersion;
+            var otherTargetRuntime = other.TargetFrameworkHelper.TargetRuntimeVersion;
+            if (targetRuntime > otherTargetRuntime)
+                return true;
+
+            if (targetRuntime < otherTargetRuntime)
+                return false;
+
+            //Everything is equal, override only if this one was specified exactly while the other wasn't
             return !FromWildCard && other.FromWildCard;
+        }
+
+        private AssemblyDefinition GetAssemblyDefinition()
+        {
+            var resolver = new DefaultAssemblyResolver();
+            resolver.AddSearchDirectory(System.IO.Path.GetDirectoryName(FilePath));
+            resolver.AddSearchDirectory(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location));
+            var parameters = new ReaderParameters { AssemblyResolver = resolver };
+
+            return AssemblyDefinition.ReadAssembly(FilePath, parameters);
         }
     }
 }

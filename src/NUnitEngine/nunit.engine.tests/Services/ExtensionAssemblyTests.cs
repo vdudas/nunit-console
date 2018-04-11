@@ -33,7 +33,7 @@ namespace NUnit.Engine.Services.Tests
     {
         private static readonly Assembly THIS_ASSEMBLY = Assembly.GetExecutingAssembly();
         private static readonly string THIS_ASSEMBLY_PATH = THIS_ASSEMBLY.Location;
-        private static readonly string THIS_ASSEMBLY_NAME = THIS_ASSEMBLY.GetName().FullName;
+        private static readonly string THIS_ASSEMBLY_NAME = THIS_ASSEMBLY.GetName().Name;
         private static readonly Assembly ENGINE_ASSEMBLY = Assembly.GetAssembly(typeof(ExtensionAssembly));
         private static readonly string ENGINE_ASSEMBLY_PATH = ENGINE_ASSEMBLY.Location;
 
@@ -67,7 +67,7 @@ namespace NUnit.Engine.Services.Tests
         [Test]
         public void AssemblyName()
         {
-            Assert.That(_ea.AssemblyName.FullName, Is.EqualTo(THIS_ASSEMBLY_NAME));
+            Assert.That(_ea.AssemblyName, Is.EqualTo(THIS_ASSEMBLY_NAME));
         }
 
         [Test]
@@ -106,12 +106,10 @@ namespace NUnit.Engine.Services.Tests
             Assert.False(eaWild.IsBetterVersionOf(_ea));
         }
 
-#if DEBUG
         [Test]
         public void IsBetterVersionOf_ThrowsIfNotDuplicates()
         {
             Assert.That(() => { _ea.IsBetterVersionOf(_eaOther); }, Throws.TypeOf<NUnitEngineException>());
         }
-#endif
     }
 }
