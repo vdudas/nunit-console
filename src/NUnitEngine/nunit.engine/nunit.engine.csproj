@@ -64,6 +64,7 @@
       <Link>Agents\AgentExitCodes.cs</Link>
     </Compile>
     <Compile Include="Agents\RemoteTestAgentProxy.cs" />
+    <Compile Include="Internal\RuntimeFrameworks\DotNetFrameworkLocator.cs" />
     <Compile Include="Drivers\NotRunnableFrameworkDriver.cs" />
     <Compile Include="Drivers\NUnit2DriverFactory.cs">
       <SubType>Code</SubType>
